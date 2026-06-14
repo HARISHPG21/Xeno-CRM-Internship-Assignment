@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from sqlalchemy.orm import Session
-from .models import Customer
+from app.models import Customer
 
 # Standard RFM Segments mapping from FDE spec page 5
 RFM_SEGMENTS = {

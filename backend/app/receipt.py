@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from datetime import datetime
-from .database import get_db
-from .models import Communication, Campaign, ReceiptEvent
-from .schemas import ReceiptPayload
+from app.database import get_db
+from app.models import Communication, Campaign, ReceiptEvent
+from app.schemas import ReceiptPayload
 
 router = APIRouter(prefix="/api")
 
@@ -86,7 +86,7 @@ async def receive_receipt(payload: ReceiptPayload, db: Session = Depends(get_db)
         
         # Trigger WebSocket broadcast of updated stats
         try:
-            from .websocket_manager import manager
+            from app.websocket_manager import manager
             await manager.broadcast_campaign_stats(comm.campaign_id, db)
         except Exception as e:
             print(f"[Receipt Webhook] Error triggering WebSocket broadcast: {e}")

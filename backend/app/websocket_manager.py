@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import WebSocket
 from sqlalchemy.orm import Session
-from . import crud
+from app import crud
 
 class ConnectionManager:
     def __init__(self):

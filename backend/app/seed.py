@@ -3,9 +3,9 @@ import json
 from datetime import datetime, timedelta
 from faker import Faker
 from sqlalchemy.orm import Session
-from .database import engine, Base, SessionLocal
-from .models import Customer, Order, Segment, Campaign, Communication, Message
-from . import crud
+from app.database import engine, Base, SessionLocal
+from app.models import Customer, Order, Segment, Campaign, Communication, Message
+from app import crud
 
 # Setup Faker with Indian locale
 fake = Faker("en_IN")
@@ -171,7 +171,7 @@ def seed_data(db: Session, num_customers: int = 50):
     print(f"Database successfully seeded with {len(customers)} customers and {total_orders_created} orders.")
 
     # Run RFM scoring & Persona assignment for all customers immediately
-    from .rfm import calculate_rfm
+    from app.rfm import calculate_rfm
     calculate_rfm(db)
 
     # Pre-seed 4 named segments for instant demo (spec page 21-22)

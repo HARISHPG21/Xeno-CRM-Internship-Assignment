@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta
 from typing import Dict, Any, List
-from . import models, schemas
+from app import models, schemas
 
 # Customer CRUD
 def create_customer(db: Session, customer: schemas.CustomerCreate):
@@ -21,7 +21,7 @@ def create_customer(db: Session, customer: schemas.CustomerCreate):
     db.refresh(db_customer)
     
     # Recalculate RFM and persona badges dynamically
-    from .rfm import calculate_rfm
+    from app.rfm import calculate_rfm
     calculate_rfm(db)
     db.refresh(db_customer)
     return db_customer
@@ -47,7 +47,7 @@ def create_order(db: Session, order: schemas.OrderCreate):
     db.refresh(db_order)
     
     # Recalculate RFM and persona badges dynamically
-    from .rfm import calculate_rfm
+    from app.rfm import calculate_rfm
     calculate_rfm(db)
     return db_order
 
