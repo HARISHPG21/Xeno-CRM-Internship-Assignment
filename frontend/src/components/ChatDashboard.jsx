@@ -42,7 +42,10 @@ export default function ChatDashboard() {
   // WebSocket live stats listener for instant callback stats refresh!
   useEffect(() => {
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${wsProtocol}//localhost:8000/api/ws/campaigns`;
+    const wsHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'localhost:8000'
+      : window.location.host + '/_/backend';
+    const wsUrl = `${wsProtocol}//${wsHost}/api/ws/campaigns`;
     let ws;
     
     function connect() {
