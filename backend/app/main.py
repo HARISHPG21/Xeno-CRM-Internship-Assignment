@@ -30,6 +30,20 @@ app = FastAPI(title="Xeno Mini CRM API", version="1.0.0")
 def startup_event():
     scheduler.start()
     print("[APscheduler] Started scheduler...")
+    
+    # Auto-seed database if empty (useful for ephemeral serverless platforms like Vercel)
+    db = database.SessionLocal()
+    try:
+        from .models import Customer
+        if db.query(Customer).count() == 0:
+            print("[Startup] Database is empty. Seeding with default D2C data...")
+            from .seed import seed_data
+            seed_data(db, num_customers=50)
+            print("[Startup] Database auto-seeding completed successfully.")
+    except Exception as e:
+        print(f"[Startup] Failed to auto-seed database: {e}")
+    finally:
+        db.close()
 
 @app.on_event("shutdown")
 def shutdown_event():
