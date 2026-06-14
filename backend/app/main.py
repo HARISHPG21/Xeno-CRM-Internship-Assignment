@@ -11,17 +11,20 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import List, Optional
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import os
 
-# Initialize APscheduler only if not in Vercel serverless env
-is_vercel = os.getenv("VERCEL") or os.getenv("VERCEL_ENV")
-scheduler = AsyncIOScheduler() if not is_vercel else None
+# Safe import of APScheduler — disabled on Vercel serverless (no persistent threads)
+try:
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    is_vercel = os.getenv("VERCEL") or os.getenv("VERCEL_ENV")
+    scheduler = AsyncIOScheduler() if not is_vercel else None
+except Exception:
+    scheduler = None
 
-from . import models, schemas, crud, config, database
-from .agent import chat_with_agent
-from .seed import seed_data
-from .receipt import router as receipt_router
+from app import models, schemas, crud, config, database
+from app.agent import chat_with_agent
+from app.seed import seed_data
+from app.receipt import router as receipt_router
 
 # Initialize Database tables
 models.Base.metadata.create_all(bind=database.engine)
@@ -37,10 +40,10 @@ def startup_event():
     # Auto-seed database if empty (useful for ephemeral serverless platforms like Vercel)
     db = database.SessionLocal()
     try:
-        from .models import Customer
+        from app.models import Customer
         if db.query(Customer).count() == 0:
             print("[Startup] Database is empty. Seeding with default D2C data...")
-            from .seed import seed_data
+            from app.seed import seed_data
             seed_data(db, num_customers=50)
             print("[Startup] Database auto-seeding completed successfully.")
     except Exception as e:
@@ -82,7 +85,7 @@ def run_db_seed(num_customers: Optional[int] = 50, db: Session = Depends(databas
 @app.post("/api/rfm/recalculate", status_code=status.HTTP_200_OK)
 def recalculate_rfm_scores(db: Session = Depends(database.get_db)):
     try:
-        from .rfm import calculate_rfm
+        from app.rfm import calculate_rfm
         calculate_rfm(db)
         return {"status": "success", "message": "RFM scores and customer personas successfully recalculated."}
     except Exception as e:
@@ -102,7 +105,7 @@ def get_personas(db: Session = Depends(database.get_db)):
             persona_counts[p] = 0
             
     # 2. Try calling Gemini to generate narrative profiles based on the distribution
-    from .agent import gemini_client
+    from app.agent import gemini_client
     if gemini_client:
         try:
             # Get segment distribution for context
@@ -367,7 +370,7 @@ def analyse_campaign_results(id: int, db: Session = Depends(database.get_db)):
         }
         
     # Call Gemini to write a narrative report
-    from .agent import gemini_client
+    from app.agent import gemini_client
     narrative = ""
     if gemini_client:
         try:
@@ -406,9 +409,9 @@ def analyse_campaign_results(id: int, db: Session = Depends(database.get_db)):
 async def run_in_process_simulation(comm_data_list: List[dict]):
     import random
     import asyncio
-    from .receipt import receive_receipt
-    from .schemas import ReceiptPayload
-    from .database import SessionLocal
+    from app.receipt import receive_receipt
+    from app.schemas import ReceiptPayload
+    from app.database import SessionLocal
     
     async def simulate_single_comm(comm_info: dict):
         comm_id = comm_info["communication_id"]
@@ -575,7 +578,7 @@ class SchedulePayload(BaseModel):
 
 async def launch_scheduled_campaign_job(campaign_id: int):
     print(f"[APscheduler Job] Starting launch sequence for scheduled campaign ID: {campaign_id}")
-    from .database import SessionLocal
+    from app.database import SessionLocal
     db = SessionLocal()
     try:
         campaign = db.query(models.Campaign).filter(models.Campaign.id == campaign_id).first()
@@ -793,7 +796,7 @@ def upload_customers_csv(file: UploadFile = File(...), db: Session = Depends(dat
 # WebSocket Stats Endpoint
 @app.websocket("/api/ws/campaigns")
 async def websocket_campaign_stats(websocket: WebSocket):
-    from .websocket_manager import manager
+    from app.websocket_manager import manager
     await manager.connect(websocket)
     try:
         while True:

@@ -4,20 +4,29 @@ import re
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
-from anthropic import Anthropic
-from google import genai
-from google.genai import types
 
-from . import crud, models, schemas
-from .database import SessionLocal
+from app import crud, models, schemas
+from app.database import SessionLocal
 
-# Setup Anthropic client if key is available
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-client = Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
+# Safe import of Anthropic — may not be available in all environments
+try:
+    from anthropic import Anthropic
+    ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+    client = Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
+except Exception:
+    Anthropic = None
+    client = None
 
-# Setup Gemini client if key is available
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-gemini_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+# Safe import of Google Gemini — may not be available in all environments
+try:
+    from google import genai
+    from google.genai import types
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+    gemini_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+except Exception:
+    genai = None
+    types = None
+    gemini_client = None
 
 
 # Helper to run database tools directly from python
@@ -192,7 +201,7 @@ class CRMTools:
     def schedule_campaign(db: Session, campaign_id: int, scheduled_at: str) -> Dict[str, Any]:
         # Import scheduler to schedule
         try:
-            from .main import scheduler, launch_scheduled_campaign_job
+            from app.main import scheduler, launch_scheduled_campaign_job
             from datetime import datetime
             
             # Clean string and parse
@@ -248,7 +257,7 @@ class CRMTools:
 
     @staticmethod
     def analyse_campaign(db: Session, campaign_id: int) -> Dict[str, Any]:
-        from .main import analyse_campaign_results
+        from app.main import analyse_campaign_results
         try:
             res = analyse_campaign_results(campaign_id, db)
             return res
