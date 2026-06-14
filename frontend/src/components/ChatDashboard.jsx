@@ -140,7 +140,7 @@ export default function ChatDashboard() {
 
       // Get last active segment preview
       if (segments.length > 0) {
-        const latestSeg = segments[0];
+        const latestSeg = segments.find(s => s.customer_count > 0) || segments[0];
         setLastSegment(latestSeg);
         const segCust = await api.getSegmentCustomers(latestSeg.id);
         setLastSegmentCustomers(segCust.slice(0, 5));

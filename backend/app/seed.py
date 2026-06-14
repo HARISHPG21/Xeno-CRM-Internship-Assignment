@@ -220,6 +220,34 @@ def seed_data(db: Session, num_customers: int = 50):
     db.commit()
     print("Pre-seeded segments created successfully.")
 
+    # Pre-seed some default campaigns for demonstration
+    print("Pre-seeding demo campaigns...")
+    camp1 = Campaign(
+        name="Win Back VIP Dormants",
+        segment_id=seg1.id,
+        message_template="Hi [Name], we miss you! Use code WELCOMEBACK for 20% off your next purchase: https://xeno.shop/wb",
+        is_ab_test=False,
+        channel="sms",
+        status="draft",
+        created_by="system"
+    )
+    db.add(camp1)
+
+    camp2 = Campaign(
+        name="Chennai Gold Exclusive Offer",
+        segment_id=seg3.id,
+        message_template="Dear [Name], enjoy an exclusive 15% discount at our Chennai store this weekend: https://xeno.shop/chennai",
+        message_template_b="Hello [Name], exclusive Chennai Gold rewards await you! Details: https://xeno.shop/rewards",
+        is_ab_test=True,
+        channel="email",
+        status="draft",
+        created_by="system"
+    )
+    db.add(camp2)
+    db.commit()
+    print("Pre-seeded campaigns created successfully.")
+
+
 if __name__ == "__main__":
     db = SessionLocal()
     # Create tables
