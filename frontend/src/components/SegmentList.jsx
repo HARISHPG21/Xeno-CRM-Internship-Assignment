@@ -78,7 +78,7 @@ export default function SegmentList() {
           <div className="glass-panel p-12 text-center text-slate-500 text-xs rounded-2xl">Loading segments...</div>
         ) : segments.length === 0 ? (
           <div className="glass-panel p-12 text-center text-slate-500 text-xs rounded-2xl">
-            No segments created yet. Talk to Zeno AI Copilot to define custom segment criteria.
+            No segments created yet. Talk to Xeno AI Copilot to define custom segment criteria.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -518,7 +518,7 @@ async def run_llm_agent(db: Session, message: str, history: List[Dict[str, str]]
     messages.append({"role": "user", "content": message})
 
     system_prompt = (
-        "You are Zeno, the intelligent AI Agent for Xeno Mini CRM. "
+        "You are Xeno, the intelligent AI Agent for Xeno Mini CRM. "
         "Your task is to help the marketer segment shoppers, draft messages, and launch campaigns. "
         "Be conversational and professional. Always use tool calling when performing actions or pulling customer/campaign info. "
         "Explain tool outputs in simple markdown. Under the hood, you have full access to CRM tools."
@@ -664,7 +664,7 @@ async def run_gemini_agent(db: Session, message: str, history: List[Dict[str, st
     )
 
     system_prompt = (
-        "You are Zeno, the intelligent AI Agent for Xeno Mini CRM. "
+        "You are Xeno, the intelligent AI Agent for Xeno Mini CRM. "
         "Your task is to help the marketer segment shoppers, draft messages, and launch campaigns. "
         "Be conversational and professional. Always use tool calling when performing actions or pulling customer/campaign info. "
         "Explain tool outputs in simple markdown. Under the hood, you have full access to CRM tools."
@@ -1018,7 +1018,7 @@ def run_regex_fallback_agent(db: Session, message: str, history: List[Dict[str, 
 
     # Default fallback welcome message
     return (
-        "Hi! I'm Zeno, your AI CRM Agent. I can help you reach shoppers intelligently. "
+        "Hi! I'm Xeno, your AI CRM Agent. I can help you reach shoppers intelligently. "
         "Here are things you can tell me:\n\n"
         "- *'I want to re-engage gold tier customers in Delhi'*\n"
         "- *'Find customers who spent over ₹5000 and haven't ordered in 90 days'*\n"

@@ -96,7 +96,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, history }),
     });
-    if (!res.ok) throw new Error('Failed to send message to Zeno');
+    if (!res.ok) throw new Error('Failed to send message to Xeno');
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder('utf-8');

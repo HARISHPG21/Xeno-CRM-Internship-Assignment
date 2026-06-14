@@ -36,7 +36,7 @@ export default function App() {
             <Sparkles size={18} className="text-white fill-white" />
           </div>
           <div>
-            <h1 className="font-extrabold text-slate-100 tracking-tight text-md">Zeno <span className="text-blue-500 font-semibold">CRM</span></h1>
+            <h1 className="font-extrabold text-slate-100 tracking-tight text-md">Xeno <span className="text-blue-500 font-semibold">CRM</span></h1>
             <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold">AI-Native Engagement</p>
           </div>
         </div>
@@ -108,7 +108,7 @@ export default function App() {
 
       {/* FOOTER */}
       <footer className="py-4 border-t border-slate-900/60 text-center text-[10px] text-slate-600">
-        Zeno CRM Application — Built for Xeno Engineering Take-Home Assignment
+        Xeno CRM Application — Built for Xeno Engineering Take-Home Assignment
       </footer>
     </div>
   );

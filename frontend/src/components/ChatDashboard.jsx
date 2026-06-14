@@ -48,7 +48,7 @@ export default function ChatDashboard() {
     function connect() {
       ws = new WebSocket(wsUrl);
       ws.onopen = () => {
-        console.log('[WebSocket] Connected to Zeno live stats broadcaster');
+        console.log('[WebSocket] Connected to Xeno live stats broadcaster');
       };
       ws.onmessage = (event) => {
         try {
@@ -174,7 +174,7 @@ export default function ChatDashboard() {
       // Replace or update streaming message with error details
       setMessages(prev => prev.map(m => m.id === aiMsgId ? {
         ...m,
-        content: '❌ **Error**: Failed to connect to Zeno Agent. Please make sure the CRM Backend is running.'
+        content: '❌ **Error**: Failed to connect to Xeno Agent. Please make sure the CRM Backend is running.'
       } : m));
     } finally {
       setIsLoading(false);
@@ -394,7 +394,7 @@ export default function ChatDashboard() {
               <Sparkles size={18} className="animate-pulse-soft" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-100">Zeno AI Copilot</h3>
+              <h3 className="font-bold text-slate-100">Xeno AI Copilot</h3>
               <p className="text-[11px] text-slate-400 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
                 Active and Listening
@@ -451,7 +451,7 @@ export default function ChatDashboard() {
               <div>
                 <h4 className="font-semibold text-slate-200">Start a Campaign Conversation</h4>
                 <p className="text-xs text-slate-400 mt-1">
-                  Describe the segment of customers you want to reach, and Zeno will build the segment, draft personal messaging templates, and queue delivery simulations.
+                  Describe the segment of customers you want to reach, and Xeno will build the segment, draft personal messaging templates, and queue delivery simulations.
                 </p>
               </div>
               <div className="text-[11px] text-left w-full space-y-1.5 bg-slate-900/40 border border-slate-800/40 rounded-xl p-3">
@@ -511,7 +511,7 @@ export default function ChatDashboard() {
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Talk to Zeno (e.g. 'Draft a WhatsApp campaign for high spenders')"
+            placeholder="Talk to Xeno (e.g. 'Draft a WhatsApp campaign for high spenders')"
             className="flex-1 px-4 py-2.5 glass-input text-sm text-slate-100 placeholder-slate-500"
             disabled={isLoading}
           />
@@ -701,7 +701,7 @@ export default function ChatDashboard() {
               <div className="h-full flex flex-col items-center justify-center text-slate-500 py-6 text-center">
                 <BarChart2 size={28} className="stroke-[1.5] mb-2 text-slate-600" />
                 <p className="text-xs font-medium">No campaigns run yet</p>
-                <p className="text-[10px] text-slate-600 max-w-xs mt-0.5">Create a campaign template with Zeno AI and launch it to see simulated webhooks.</p>
+                <p className="text-[10px] text-slate-600 max-w-xs mt-0.5">Create a campaign template with Xeno AI and launch it to see simulated webhooks.</p>
               </div>
             ) : (
               recentCampaigns.map((camp) => {

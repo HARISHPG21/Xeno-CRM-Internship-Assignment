@@ -1,8 +1,8 @@
-# Zeno CRM - Advanced AI-Native D2C Customer Relationship Management
+# Xeno CRM - Advanced AI-Native D2C Customer Relationship Management
 
-Zeno CRM is an advanced, full-stack CRM built to ingest customer records, calculate behavioral RFM (Recency, Frequency, Monetary) segments, construct target audiences, and launch highly personalized messaging campaigns. 
+Xeno CRM is an advanced, full-stack CRM built to ingest customer records, calculate behavioral RFM (Recency, Frequency, Monetary) segments, construct target audiences, and launch highly personalized messaging campaigns. 
 
-The application features a premium dark-mode dashboard and **Zeno AI Copilot**, an intelligent chat assistant that uses live function-calling tool execution (via the Google Gemini SDK) to segment shoppers and manage campaigns in real-time.
+The application features a premium dark-mode dashboard and **Xeno AI Copilot**, an intelligent chat assistant that uses live function-calling tool execution (via the Google Gemini SDK) to segment shoppers and manage campaigns in real-time.
 
 ---
 
@@ -46,7 +46,7 @@ flowchart TD
    - A dedicated `receipt_events` database table enforces a unique constraint on `(communication_id, event)` to block duplicate callback updates.
    - A linear weight scale (`STATUS_WEIGHTS`) blocks out-of-order callback progression (e.g., if "opened" arrives before "delivered", it is correctly updated and subsequent late "delivered" callbacks are safely ignored).
 3. **Structured RFM Segmentation**: Real-time DB triggers calculate Recency, Frequency, and Monetary scores (1-5) and map users to 5 behaviors (VIP Dormants, Loyal High-Spenders, Lapsed Buyers, New Shoppers, Bargain Hunters) with overlap mathematical analysis.
-4. **Zeno AI Copilot Chat-First UX**: Backed by Gemini's structured output model and tool declaration parameters. It contains 12 active tools (`create_segment`, `create_campaign`, `analyse_campaign`, etc.). If Gemini hits rate limits, it falls back to a regex-based parser.
+4. **Xeno AI Copilot Chat-First UX**: Backed by Gemini's structured output model and tool declaration parameters. It contains 12 active tools (`create_segment`, `create_campaign`, `analyse_campaign`, etc.). If Gemini hits rate limits, it falls back to a regex-based parser.
 
 ---
 
@@ -118,7 +118,7 @@ A recommended script outline for your walkthrough:
 
 ### 1. Introduction (0:00 - 1:00)
 * Open on the **Vite Web UI Dashboard** (Port 5173).
-* Introduce the project: **Zeno Mini CRM**, a full-stack platform designed to help retail marketers segment their database and run data-driven, A/B-tested, personalized campaigns.
+* Introduce the project: **Xeno Mini CRM**, a full-stack platform designed to help retail marketers segment their database and run data-driven, A/B-tested, personalized campaigns.
 * Briefly showcase the **Premium Dark-Mode Theme** (neon glows, cards, Outfit/Plus Jakarta Sans typography).
 
 ### 2. Customers & Cohort Segment Analysis (1:00 - 2:00)
@@ -126,8 +126,8 @@ A recommended script outline for your walkthrough:
 * Move to the **Segments** tab. Show how selecting a segment displays its audience details and its **overlapping intersection percentage** with other segments in the database.
 * Point out the **Analytics View** showing the 5x5 RFM heatmap.
 
-### 3. Zeno AI Copilot Chat Demo (2:00 - 3:30)
-* Go back to the **Dashboard** homepage. Talk about how the Zeno AI Copilot brings a chat-first UX.
+### 3. Xeno AI Copilot Chat Demo (2:00 - 3:30)
+* Go back to the **Dashboard** homepage. Talk about how the Xeno AI Copilot brings a chat-first UX.
 * Type a message: *"Find customers who spent over ₹5000 and haven't ordered in 90 days"*.
 * Show how the AI executes the `create_segment` tool under the hood, reports matching customer count, recommendations a channel (like RCS), and automatically drafts Option A and Option B campaign copies.
 * Type *"Launch Option A"*. Walk through the instant feedback showing the campaign is now queued.

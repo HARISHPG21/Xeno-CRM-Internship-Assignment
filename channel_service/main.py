@@ -15,7 +15,7 @@ load_dotenv()
 CRM_BACKEND_URL = os.getenv("CRM_BACKEND_URL", "http://localhost:8000")
 PORT = int(os.getenv("PORT", "8001"))
 
-app = FastAPI(title="Zeno Channel Service Stub", version="1.0.0")
+app = FastAPI(title="Xeno Channel Service Stub", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,

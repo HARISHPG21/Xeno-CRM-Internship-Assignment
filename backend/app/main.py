@@ -24,7 +24,7 @@ from .receipt import router as receipt_router
 # Initialize Database tables
 models.Base.metadata.create_all(bind=database.engine)
 
-app = FastAPI(title="Zeno Mini CRM API", version="1.0.0")
+app = FastAPI(title="Xeno Mini CRM API", version="1.0.0")
 
 @app.on_event("startup")
 def startup_event():
