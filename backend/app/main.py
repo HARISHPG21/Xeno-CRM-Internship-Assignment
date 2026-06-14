@@ -384,20 +384,104 @@ def analyse_campaign_results(id: int, db: Session = Depends(database.get_db)):
         "narrative": narrative
     }
 
+# In-process simulation helper for easy serverless deployments (Render/Railway free tiers)
+async def run_in_process_simulation(comm_data_list: List[dict]):
+    import random
+    import asyncio
+    from .receipt import receive_receipt
+    from .schemas import ReceiptPayload
+    from .database import SessionLocal
+    
+    async def simulate_single_comm(comm_info: dict):
+        comm_id = comm_info["communication_id"]
+        
+        # Step 1: SENT
+        await asyncio.sleep(random.uniform(1.0, 3.0))
+        db = SessionLocal()
+        try:
+            await receive_receipt(ReceiptPayload(communication_id=comm_id, event="sent", timestamp=datetime.utcnow()), db)
+        finally:
+            db.close()
+            
+        # Step 2: DELIVERED (85%) or FAILED (5%)
+        await asyncio.sleep(random.uniform(2.0, 4.0))
+        rand = random.random()
+        db = SessionLocal()
+        try:
+            if rand < 0.85:
+                await receive_receipt(ReceiptPayload(communication_id=comm_id, event="delivered", timestamp=datetime.utcnow()), db)
+            elif rand < 0.90:
+                await receive_receipt(ReceiptPayload(communication_id=comm_id, event="failed", timestamp=datetime.utcnow()), db)
+                return
+            else:
+                return
+        finally:
+            db.close()
+            
+        # Step 2.5: READ (45%)
+        await asyncio.sleep(random.uniform(1.5, 3.0))
+        if random.random() >= 0.45:
+            return
+        db = SessionLocal()
+        try:
+            await receive_receipt(ReceiptPayload(communication_id=comm_id, event="read", timestamp=datetime.utcnow()), db)
+        finally:
+            db.close()
+            
+        # Step 3: OPENED (60%)
+        await asyncio.sleep(random.uniform(2.0, 4.0))
+        if random.random() >= 0.60:
+            return
+        db = SessionLocal()
+        try:
+            await receive_receipt(ReceiptPayload(communication_id=comm_id, event="opened", timestamp=datetime.utcnow()), db)
+        finally:
+            db.close()
+            
+        # Step 4: CLICKED (25%)
+        await asyncio.sleep(random.uniform(3.0, 5.0))
+        if random.random() >= 0.25:
+            return
+        db = SessionLocal()
+        try:
+            await receive_receipt(ReceiptPayload(communication_id=comm_id, event="clicked", timestamp=datetime.utcnow()), db)
+        finally:
+            db.close()
+            
+        # Step 5: CONVERTED (15%)
+        await asyncio.sleep(random.uniform(5.0, 10.0))
+        if random.random() >= 0.15:
+            return
+        db = SessionLocal()
+        try:
+            await receive_receipt(ReceiptPayload(communication_id=comm_id, event="converted", timestamp=datetime.utcnow()), db)
+        finally:
+            db.close()
+
+    # Launch simulation for all communications in background
+    for comm in comm_data_list:
+        asyncio.create_task(simulate_single_comm(comm))
+
 # Asynchronous Channel Service calling helper
 async def dispatch_to_channel_service(campaign_id: int, comm_data_list: List[dict]):
     async with httpx.AsyncClient() as client:
         payload = {"communications": comm_data_list}
         url = f"{config.CHANNEL_SERVICE_URL}/send"
+        success = False
         try:
             print(f"Dispatching campaign {campaign_id} batch send to Channel Service at {url}...")
-            response = await client.post(url, json=payload, timeout=10.0)
+            response = await client.post(url, json=payload, timeout=5.0)
             if response.status_code == 200:
                 print(f"Batch successfully delivered to Channel Service for campaign {campaign_id}")
+                success = True
             else:
                 print(f"Channel Service returned error: {response.status_code} - {response.text}")
         except Exception as e:
             print(f"Failed to reach Channel Service: {str(e)}")
+            
+        if not success:
+            print(f"Falling back to in-process campaign status simulation for campaign {campaign_id}...")
+            await run_in_process_simulation(comm_data_list)
 
 # Launch Campaign
 @app.post("/api/campaigns/{id}/launch", status_code=status.HTTP_200_OK)
@@ -530,14 +614,26 @@ async def launch_scheduled_campaign_job(campaign_id: int):
         db.commit()
         
         # Dispatch to channel service
+        success = False
         async with httpx.AsyncClient() as client:
             payload = {"communications": comm_data_list}
             url = f"{config.CHANNEL_SERVICE_URL}/send"
             try:
-                await client.post(url, json=payload, timeout=10.0)
-                print(f"[APscheduler Job] Batch successfully delivered to Channel Service for campaign {campaign_id}")
+                response = await client.post(url, json=payload, timeout=10.0)
+                if response.status_code == 200:
+                    print(f"[APscheduler Job] Batch successfully delivered to Channel Service for campaign {campaign_id}")
+                    success = True
             except Exception as e:
                 print(f"[APscheduler Job] Failed to reach Channel Service: {str(e)}")
+                
+        if not success:
+            print(f"[APscheduler Job] Falling back to in-process campaign status simulation for campaign {campaign_id}...")
+            import asyncio
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(run_in_process_simulation(comm_data_list))
+            else:
+                asyncio.run(run_in_process_simulation(comm_data_list))
     except Exception as e:
         print(f"[APscheduler Job] Error running campaign {campaign_id}: {e}")
     finally:
