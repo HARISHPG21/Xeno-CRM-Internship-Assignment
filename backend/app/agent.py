@@ -207,14 +207,17 @@ class CRMTools:
             campaign.scheduled_at = dt
             db.commit()
             
-            scheduler.add_job(
-                launch_scheduled_campaign_job,
-                trigger="date",
-                run_date=dt,
-                args=[campaign_id],
-                id=f"campaign_{campaign_id}",
-                replace_existing=True
-            )
+            if scheduler:
+                scheduler.add_job(
+                    launch_scheduled_campaign_job,
+                    trigger="date",
+                    run_date=dt,
+                    args=[campaign_id],
+                    id=f"campaign_{campaign_id}",
+                    replace_existing=True
+                )
+            else:
+                print(f"[Vercel Serverless] Mocking campaign schedule from AI Agent for ID {campaign_id} at {dt}")
             return {
                 "campaign_id": campaign_id,
                 "scheduled_at": scheduled_at,

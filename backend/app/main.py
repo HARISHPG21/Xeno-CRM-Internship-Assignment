@@ -12,9 +12,11 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import List, Optional
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import os
 
-# Initialize APscheduler
-scheduler = AsyncIOScheduler()
+# Initialize APscheduler only if not in Vercel serverless env
+is_vercel = os.getenv("VERCEL") or os.getenv("VERCEL_ENV")
+scheduler = AsyncIOScheduler() if not is_vercel else None
 
 from . import models, schemas, crud, config, database
 from .agent import chat_with_agent
@@ -28,8 +30,9 @@ app = FastAPI(title="Xeno Mini CRM API", version="1.0.0")
 
 @app.on_event("startup")
 def startup_event():
-    scheduler.start()
-    print("[APscheduler] Started scheduler...")
+    if scheduler:
+        scheduler.start()
+        print("[APscheduler] Started scheduler...")
     
     # Auto-seed database if empty (useful for ephemeral serverless platforms like Vercel)
     db = database.SessionLocal()
@@ -47,8 +50,9 @@ def startup_event():
 
 @app.on_event("shutdown")
 def shutdown_event():
-    scheduler.shutdown()
-    print("[APscheduler] Stopped scheduler.")
+    if scheduler:
+        scheduler.shutdown()
+        print("[APscheduler] Stopped scheduler.")
 
 # Setup CORS
 app.add_middleware(
@@ -665,15 +669,18 @@ async def schedule_campaign_launch(id: int, payload: SchedulePayload, db: Sessio
     campaign.scheduled_at = payload.scheduled_at
     db.commit()
     
-    # Schedule job using apscheduler
-    scheduler.add_job(
-        launch_scheduled_campaign_job,
-        trigger="date",
-        run_date=payload.scheduled_at,
-        args=[id],
-        id=f"campaign_{id}",
-        replace_existing=True
-    )
+    # Schedule job using apscheduler if available
+    if scheduler:
+        scheduler.add_job(
+            launch_scheduled_campaign_job,
+            trigger="date",
+            run_date=payload.scheduled_at,
+            args=[id],
+            id=f"campaign_{id}",
+            replace_existing=True
+        )
+    else:
+        print(f"[Vercel Serverless] Mocking campaign schedule for ID {id} at {payload.scheduled_at}")
     
     return {"status": "success", "message": f"Campaign {id} successfully scheduled for {payload.scheduled_at}"}
 
