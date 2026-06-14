@@ -1,0 +1,5 @@
+# Ignore the Python serverless function directory
+# Backend is deployed on Render.com, not Vercel
+api/
+backend/
+channel_service/

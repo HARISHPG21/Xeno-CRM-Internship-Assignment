@@ -1,0 +1,15 @@
+services:
+  # FastAPI Backend - persistent web service
+  - type: web
+    name: xeno-crm-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        value: sqlite:////tmp/xeno.db
+      - key: CHANNEL_SERVICE_URL
+        value: http://localhost:8001
