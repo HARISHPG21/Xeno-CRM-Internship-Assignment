@@ -3,7 +3,7 @@ import asyncio
 import csv
 import io
 import json
-from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, File, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Depends, HTTPException, status, File, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -405,108 +405,94 @@ def analyse_campaign_results(id: int, db: Session = Depends(database.get_db)):
         "narrative": narrative
     }
 
-# In-process simulation helper for easy serverless deployments (Render/Railway free tiers)
-async def run_in_process_simulation(comm_data_list: List[dict]):
+# Synchronous simulation — writes all final statuses in one DB transaction.
+# This is reliable on ephemeral/serverless platforms (Render free tier) where
+# async background tasks die when the server spins down between requests.
+def run_sync_simulation(campaign_id: int, comm_ids: List[int], db: Session):
     import random
-    import asyncio
-    from app.receipt import receive_receipt
-    from app.schemas import ReceiptPayload
-    from app.database import SessionLocal
-    
-    async def simulate_single_comm(comm_info: dict):
-        comm_id = comm_info["communication_id"]
-        
-        # Step 1: SENT
-        await asyncio.sleep(random.uniform(1.0, 3.0))
-        db = SessionLocal()
-        try:
-            await receive_receipt(ReceiptPayload(communication_id=comm_id, event="sent", timestamp=datetime.utcnow()), db)
-        finally:
-            db.close()
-            
-        # Step 2: DELIVERED (85%) or FAILED (5%)
-        await asyncio.sleep(random.uniform(2.0, 4.0))
+
+    now = datetime.utcnow()
+
+    # Probability thresholds
+    P_DELIVERED = 0.90   # 90% get delivered
+    P_FAILED    = 0.05   # 5% explicitly fail
+    P_READ      = 0.50   # 50% of delivered get read
+    P_OPENED    = 0.60   # 60% of read get opened
+    P_CLICKED   = 0.30   # 30% of opened get clicked
+    P_CONVERTED = 0.20   # 20% of clicked convert
+
+    # Fetch campaign once for atomic counter update
+    campaign = db.query(models.Campaign).filter(models.Campaign.id == campaign_id).first()
+    if not campaign:
+        return
+
+    # Reset counters to 0 before simulation
+    campaign.sent_count = 0
+    campaign.delivered_count = 0
+    campaign.read_count = 0
+    campaign.opened_count = 0
+    campaign.clicked_count = 0
+    campaign.converted_count = 0
+    campaign.failed_count = 0
+
+    for comm_id in comm_ids:
+        comm = db.query(models.Communication).filter(models.Communication.id == comm_id).first()
+        if not comm:
+            continue
+
+        # All are sent
+        comm.status = "sent"
+        comm.sent_at = now
+        campaign.sent_count += 1
+
         rand = random.random()
-        db = SessionLocal()
-        try:
-            if rand < 0.85:
-                await receive_receipt(ReceiptPayload(communication_id=comm_id, event="delivered", timestamp=datetime.utcnow()), db)
-            elif rand < 0.90:
-                await receive_receipt(ReceiptPayload(communication_id=comm_id, event="failed", timestamp=datetime.utcnow()), db)
-                return
-            else:
-                return
-        finally:
-            db.close()
-            
-        # Step 2.5: READ (45%)
-        await asyncio.sleep(random.uniform(1.5, 3.0))
-        if random.random() >= 0.45:
-            return
-        db = SessionLocal()
-        try:
-            await receive_receipt(ReceiptPayload(communication_id=comm_id, event="read", timestamp=datetime.utcnow()), db)
-        finally:
-            db.close()
-            
-        # Step 3: OPENED (60%)
-        await asyncio.sleep(random.uniform(2.0, 4.0))
-        if random.random() >= 0.60:
-            return
-        db = SessionLocal()
-        try:
-            await receive_receipt(ReceiptPayload(communication_id=comm_id, event="opened", timestamp=datetime.utcnow()), db)
-        finally:
-            db.close()
-            
-        # Step 4: CLICKED (25%)
-        await asyncio.sleep(random.uniform(3.0, 5.0))
-        if random.random() >= 0.25:
-            return
-        db = SessionLocal()
-        try:
-            await receive_receipt(ReceiptPayload(communication_id=comm_id, event="clicked", timestamp=datetime.utcnow()), db)
-        finally:
-            db.close()
-            
-        # Step 5: CONVERTED (15%)
-        await asyncio.sleep(random.uniform(5.0, 10.0))
-        if random.random() >= 0.15:
-            return
-        db = SessionLocal()
-        try:
-            await receive_receipt(ReceiptPayload(communication_id=comm_id, event="converted", timestamp=datetime.utcnow()), db)
-        finally:
-            db.close()
+        if rand < P_FAILED:
+            comm.status = "failed"
+            campaign.failed_count += 1
+            continue
 
-    # Launch simulation for all communications in background
-    for comm in comm_data_list:
-        asyncio.create_task(simulate_single_comm(comm))
+        if rand < P_DELIVERED:
+            comm.status = "delivered"
+            comm.delivered_at = now
+            campaign.delivered_count += 1
+        else:
+            # Neither delivered nor failed — stays at sent
+            continue
 
-# Asynchronous Channel Service calling helper
-async def dispatch_to_channel_service(campaign_id: int, comm_data_list: List[dict]):
-    async with httpx.AsyncClient() as client:
-        payload = {"communications": comm_data_list}
-        url = f"{config.CHANNEL_SERVICE_URL}/send"
-        success = False
-        try:
-            print(f"Dispatching campaign {campaign_id} batch send to Channel Service at {url}...")
-            response = await client.post(url, json=payload, timeout=5.0)
-            if response.status_code == 200:
-                print(f"Batch successfully delivered to Channel Service for campaign {campaign_id}")
-                success = True
-            else:
-                print(f"Channel Service returned error: {response.status_code} - {response.text}")
-        except Exception as e:
-            print(f"Failed to reach Channel Service: {str(e)}")
-            
-        if not success:
-            print(f"Falling back to in-process campaign status simulation for campaign {campaign_id}...")
-            await run_in_process_simulation(comm_data_list)
+        if random.random() < P_READ:
+            comm.status = "read"
+            comm.read_at = now
+            campaign.read_count += 1
+        else:
+            continue
+
+        if random.random() < P_OPENED:
+            comm.status = "opened"
+            comm.opened_at = now
+            campaign.opened_count += 1
+        else:
+            continue
+
+        if random.random() < P_CLICKED:
+            comm.status = "clicked"
+            comm.clicked_at = now
+            campaign.clicked_count += 1
+        else:
+            continue
+
+        if random.random() < P_CONVERTED:
+            comm.status = "converted"
+            comm.converted_at = now
+            campaign.converted_count += 1
+
+    db.commit()
+    print(f"[Simulation] Campaign {campaign_id} finalised: sent={campaign.sent_count}, delivered={campaign.delivered_count}, "
+          f"read={campaign.read_count}, opened={campaign.opened_count}, clicked={campaign.clicked_count}, "
+          f"converted={campaign.converted_count}, failed={campaign.failed_count}")
 
 # Launch Campaign
 @app.post("/api/campaigns/{id}/launch", status_code=status.HTTP_200_OK)
-async def launch_campaign(id: int, background_tasks: BackgroundTasks, db: Session = Depends(database.get_db)):
+def launch_campaign(id: int, db: Session = Depends(database.get_db)):
     campaign = crud.get_campaign(db, id)
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
@@ -525,21 +511,17 @@ async def launch_campaign(id: int, background_tasks: BackgroundTasks, db: Sessio
     campaign.status = "sent"
     campaign.launched_at = datetime.utcnow()
     
-    # Generate communication records in queued status
-    comm_data_list = []
+    # Create communication records in queued state first
+    comm_ids = []
     for idx, customer in enumerate(customers):
-        # Default A/B split: alternate between variant 'A' and 'B' if campaign is A/B test
         variant = "A"
         template = campaign.message_template
         if campaign.is_ab_test:
             variant = "A" if idx % 2 == 0 else "B"
             template = campaign.message_template if variant == "A" else campaign.message_template_b
 
-        # Resolve personalized tags in template
-        personalized_msg = template
-        personalized_msg = personalized_msg.replace("{name}", customer.name)
+        personalized_msg = template.replace("{name}", customer.name)
         
-        # Extrapolate template variables if there is any offer in brackets
         offer_val = "10% off"
         if "₹" in campaign.name or "%" in campaign.name:
             parts = campaign.name.split("(")
@@ -556,22 +538,18 @@ async def launch_campaign(id: int, background_tasks: BackgroundTasks, db: Sessio
             status="queued"
         )
         db.add(comm)
-        db.flush()  # Generate primary keys
-
-        comm_data_list.append({
-            "communication_id": comm.id,
-            "recipient_phone": customer.phone,
-            "recipient_email": customer.email,
-            "message": personalized_msg,
-            "channel": campaign.channel
-        })
+        db.flush()  # Flush to get comm.id
+        comm_ids.append(comm.id)
 
     db.commit()
 
-    # Enqueue background task to make async POST to channel service stub
-    background_tasks.add_task(dispatch_to_channel_service, campaign.id, comm_data_list)
+    # Run synchronous simulation — immediately finalises all statuses in one DB commit.
+    # This is necessary for ephemeral deployments (Render free tier) where async background
+    # tasks are killed when the dyno spins down, leaving stats at zero.
+    print(f"[Launch] Running synchronous simulation for campaign {campaign.id} with {len(comm_ids)} communications...")
+    run_sync_simulation(campaign.id, comm_ids, db)
     
-    return {"status": "success", "message": f"Campaign launch initiated for {len(customers)} customers"}
+    return {"status": "success", "message": f"Campaign launched for {len(customers)} customers. Stats are ready."}
 
 class SchedulePayload(BaseModel):
     scheduled_at: datetime
@@ -634,27 +612,9 @@ async def launch_scheduled_campaign_job(campaign_id: int):
             
         db.commit()
         
-        # Dispatch to channel service
-        success = False
-        async with httpx.AsyncClient() as client:
-            payload = {"communications": comm_data_list}
-            url = f"{config.CHANNEL_SERVICE_URL}/send"
-            try:
-                response = await client.post(url, json=payload, timeout=10.0)
-                if response.status_code == 200:
-                    print(f"[APscheduler Job] Batch successfully delivered to Channel Service for campaign {campaign_id}")
-                    success = True
-            except Exception as e:
-                print(f"[APscheduler Job] Failed to reach Channel Service: {str(e)}")
-                
-        if not success:
-            print(f"[APscheduler Job] Falling back to in-process campaign status simulation for campaign {campaign_id}...")
-            import asyncio
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                loop.create_task(run_in_process_simulation(comm_data_list))
-            else:
-                asyncio.run(run_in_process_simulation(comm_data_list))
+        # Use synchronous simulation — same as the live launch endpoint
+        comm_ids = [comm["communication_id"] for comm in comm_data_list]
+        run_sync_simulation(campaign_id, comm_ids, db)
     except Exception as e:
         print(f"[APscheduler Job] Error running campaign {campaign_id}: {e}")
     finally:

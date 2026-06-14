@@ -112,9 +112,9 @@ export default function CampaignList() {
   const handleLaunchCampaign = async (campaignId, e) => {
     e.stopPropagation();
     try {
-      const response = await api.launchCampaign(campaignId);
-      alert('Campaign successfully launched! Channel simulation started.');
-      loadCampaigns();
+      await api.launchCampaign(campaignId);
+      // Stats are now immediately written by the backend — reload right away.
+      await loadCampaigns();
     } catch (err) {
       alert(`Launch error: ${err.message}`);
     }
