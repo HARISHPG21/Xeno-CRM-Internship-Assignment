@@ -40,15 +40,22 @@ export default function ChatDashboard() {
   }, []);
 
   // WebSocket live stats listener for instant callback stats refresh!
+  // On Vercel serverless, WebSocket is not supported — use polling fallback instead.
   useEffect(() => {
+    const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!isLocalDev) {
+      // Production: poll every 5s for live stats updates instead of WebSocket
+      const pollInterval = setInterval(() => refreshDashboardData(), 5000);
+      return () => clearInterval(pollInterval);
+    }
+
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-      ? 'localhost:8000'
-      : window.location.host + '/_/backend';
-    const wsUrl = `${wsProtocol}//${wsHost}/api/ws/campaigns`;
+    const wsUrl = `${wsProtocol}//localhost:8000/api/ws/campaigns`;
     let ws;
+    let destroyed = false;
     
     function connect() {
+      if (destroyed) return;
       ws = new WebSocket(wsUrl);
       ws.onopen = () => {
         console.log('[WebSocket] Connected to Xeno live stats broadcaster');
@@ -68,13 +75,16 @@ export default function ChatDashboard() {
         console.error('[WebSocket] Connection error:', err);
       };
       ws.onclose = () => {
-        console.log('[WebSocket] Connection closed. Reconnecting in 3s...');
-        setTimeout(connect, 3000);
+        if (!destroyed) {
+          console.log('[WebSocket] Connection closed. Reconnecting in 3s...');
+          setTimeout(connect, 3000);
+        }
       };
     }
     
     connect();
     return () => {
+      destroyed = true;
       if (ws) ws.close();
     };
   }, []);

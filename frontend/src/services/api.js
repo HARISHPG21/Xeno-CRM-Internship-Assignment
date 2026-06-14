@@ -3,12 +3,13 @@ const getApiBaseUrl = () => {
   if (import.meta.env.VITE_API_URL) {
     return `${import.meta.env.VITE_API_URL}/api`;
   }
-  // If running on Vercel Multi-Service (same host, relative path)
+  // In production (Vercel) or any non-localhost environment, use relative path
+  // All /api/* requests are handled by the FastAPI serverless function
   if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    return '/_/backend/api';
+    return '/api';
   }
-  // Fallback to local dev server
-  return 'http://localhost:8000/api';
+  // Local dev: Vite proxies /api -> http://localhost:8000
+  return '/api';
 };
 
 const API_BASE_URL = getApiBaseUrl();

@@ -26,11 +26,21 @@ export default function CampaignList() {
   useEffect(() => {
     loadCampaigns();
 
+    const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+    if (!isLocalDev) {
+      // Production (Vercel serverless): poll for live updates every 5s
+      const pollInterval = setInterval(() => loadCampaigns(true), 5000);
+      return () => clearInterval(pollInterval);
+    }
+
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${wsProtocol}//localhost:8000/api/ws/campaigns`;
     let ws;
+    let destroyed = false;
 
     function connect() {
+      if (destroyed) return;
       ws = new WebSocket(wsUrl);
       ws.onopen = () => {
         console.log('[WebSocket] Campaigns list connected');
@@ -61,13 +71,16 @@ export default function CampaignList() {
         console.error('[WebSocket] campaigns listener connection error:', err);
       };
       ws.onclose = () => {
-        console.log('[WebSocket] campaigns connection closed. Reconnecting in 3s...');
-        setTimeout(connect, 3000);
+        if (!destroyed) {
+          console.log('[WebSocket] campaigns connection closed. Reconnecting in 3s...');
+          setTimeout(connect, 3000);
+        }
       };
     }
 
     connect();
     return () => {
+      destroyed = true;
       if (ws) ws.close();
     };
   }, [selectedCampaignId]);
